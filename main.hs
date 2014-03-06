@@ -8,9 +8,9 @@ class Troop a where
     troopId :: a -> Int
     squadId :: a -> Int
     side :: a -> Int
-    isCommander :: a -> Bool
+    isCommander :: a -> Int 
 
-data Sworder = Sworder Int Int Int Int Bool
+data Sworder = Sworder Int Int Int Int Int
 instance Troop Sworder where 
     strength (Sworder x _ _ _ _) = x
     troopId (Sworder _ x _ _ _) = x
@@ -18,7 +18,7 @@ instance Troop Sworder where
     side (Sworder _ _ _ x _) = x
     isCommander (Sworder _ _ _ _ x) = x
 
-data Arrower = Arrower Int Int Int Int Bool
+data Arrower = Arrower Int Int Int Int Int
 instance Troop Arrower where 
     strength (Arrower x _ _ _ _) = x
     troopId (Arrower _ x _ _ _) = x
@@ -26,55 +26,31 @@ instance Troop Arrower where
     side (Arrower _ _ _ x _) = x
     isCommander (Arrower _ _ _ _ x) = x
 
-class Commander c where
-    command :: c -> Int
-    strCommander :: c -> Int
-    commanderId :: c -> Int
-
-
-data SworderCommander = SworderCommander (Int,Sworder)
-instance Commander SworderCommander where 
-    command (SworderCommander x) = (fst x)
-    strCommander (SworderCommander x) = strength (snd x)
-    commanderId (SworderCommander x) = troopId (snd x)
-
-data ArrowerCommander = ArrowerCommander (Int,Arrower) 
-instance Commander ArrowerCommander where 
-    command (ArrowerCommander x) = (fst x)
-    strCommander (ArrowerCommander x) = strength (snd x)
-    commanderId (ArrowerCommander x) = troopId (snd x)
-
 
 class Squad c where 
-    commander :: c -> Either ArrowerCommander SworderCommander
-    iter :: c -> Either [Arrower] [Sworder]
+    iter :: Troop c => c -> c  
     squadSide :: c -> Int
     squadIdToo :: c -> Int 
 
 
-data SworderSquad = SworderSquad SworderCommander [Sworder] Int Int
+data SworderSquad = SworderSquad [Sworder] Int Int
 instance Squad SworderSquad where
-    commander (SworderSquad x _ _ _) = Right x
-    iter (SworderSquad (SworderCommander x) y _ _) = Right (y ++ [(snd x)])
-    squadSide (SworderSquad _ _ x _) = x 
-    squadIdToo (SworderSquad _ _ _ x) = x
+    iter (SworderSquad y _ _) = y
+    squadSide (SworderSquad  _ x _) = x 
+    squadIdToo (SworderSquad _ _ x) = x
 
-data ArrowerSquad = ArrowerSquad ArrowerCommander [Arrower] Int Int
+data ArrowerSquad = ArrowerSquad [Arrower] Int Int
 instance Squad ArrowerSquad where
-    commander (ArrowerSquad x _ _ _) = Left x
-    iter (ArrowerSquad (ArrowerCommander x) y _ _) = Left (y ++ [(snd x)])
-    squadSide (ArrowerSquad _ _ x _) = x
-    squadIdToo (ArrowerSquad _ _ _ x) = x
+    iter (ArrowerSquad y _ _) = y 
+    squadSide (ArrowerSquad  _ x _) = x
+    squadIdToo (ArrowerSquad _ _ x) = x
 
 
 data ScatterSquad = ScatterSquad Int Int [Sworder]  
 instance Squad ScatterSquad where
-    commander (ScatterSquad y x _) = Right (SworderCommander (4, (Sworder 0 0 x y)))
-    iter (ScatterSquad _ _ x) = Right x
+    iter (ScatterSquad _ _ x) =  x
     squadSide (ScatterSquad x _ _) = x
     squadIdToo (ScatterSquad _ x _) = x
-
-
 
 
     
@@ -99,50 +75,54 @@ mainloop inh sworder arrower scatterSworder =
 
 
 
-engageSwordVSword :: SworderSquad -> SworderSquad -> ScatterSquad -> ScatterSquad -> [([Sworder], [Sworder])] 
-engageSwordVSword a b c d = 
+engageSwordVSword :: [[Sworder]] -> [[Sworder]] -> [[Sworder]] -> [[Sworder]] -> [([Sworder], [Sworder])] 
+engageSwordVSword sworder1 sworder2 scatter1 scatter2 = 
                             if ((length sworder1) > (length sworder2))
                                 then (zip as sworder2) ++ (engageSwordVScatter ys scatter2 sworder2)                   
                                 else (zip sworder1 bs) ++ (engageSwordVScatter zs scatter1 sworder1) 
                             where
-                                sworder1 = (iter a)
-                                sworder2 = (iter b)
-                                scatter1 = (iter c)
-                                scatter2 = (iter d)
-                                (as, ys) = splitAt (length (iter b)) (iter a)
-                                (bs, zs) = splitAt (length (iter a)) (iter b)
+                                (as, ys) = splitAt (length sworder2) sworder1
+                                (bs, zs) = splitAt (length sworder1) sworder2
 
-engageSwordVScatter :: [Sworder] -> [Sworder] -> [Sworder] -> [([Sworder], [Sworder])]                                                
-engageSwordVScatter a@([Sworder]) b@([Sworder]) c@([Sworder]) = -- (sworder)  (scatter)  (sworder)
-                                                if (length a > length b)
-                                                    then (zip as b) ++ engageWrap zs b c
-                                                    else zip a b
+engageSwordVScatter :: [[Sworder]] -> [[Sworder]] -> [[Sworder]] -> [([Sworder], [Sworder])]                                                
+engageSwordVScatter largeSworderSquad scatter fullSworder = -- (sworder)  (scatter)  (sworder)
+                                                if (length largeSworderSquad > length scatter)
+                                                    then (zip as scatter) ++ engageWrap zs scatter fullSworder
+                                                    else zip largeSworderSquad scatter
                                                 where
-                                                    (as, zs) = splitAt (length b) a 
-engageWrap :: [Sworder] -> [Sworder] -> [Sworder] -> [([Sworder], [Sworder])] 
-engageWrap a@([Sworder]) b@([Sworder]) c@([Sworder]) =  -- (sworder)  (scatter)  (sworder)
-                                                if (length a > length c)
-                                                    then (zip as c) ++ engageSwordVScatter zs b c
-                                                    else zip a c 
+                                                    (as, zs) = splitAt (length scatter) largeSworderSquad 
+
+engageWrap :: [[Sworder]] -> [[Sworder]] -> [[Sworder]] -> [([Sworder], [Sworder])] 
+engageWrap largeSworderSquad scatter fullSworder =  -- (sworder)  (scatter)  (sworder)
+                                                if (length largeSworderSquad > length scatter)
+                                                    then (zip as scatter) ++ engageSwordVScatter zs scatter fullSworder
+                                                    else zip largeSworderSquad fullSworder 
                                                 where
-                                                    (as, zs) = splitAt (length c) a
+                                                    (as, zs) = splitAt (length fullSworder) largeSworderSquad
 
-engageTroop :: [([Sworder], [Sworder])] -> [[(Sworder, Sworder)]]
-engageTroop c@([([Sworder], [Sworder])]) = map ( \x ->
-        if (length (fst x) > length (snd x))
-            then let (as, ys) = splitAt (length (snd x)) (fst x)
-                 in (zip as (snd x)) ++ (engageTroopWrap ys (snd x))
-            else let (bs, zs) = splitAt (length (fst x)) (snd x)
-                 in (zip (fst x) bs) ++ (engageTroopWrap zs (fst x))
-        ) (engageSwordVSword c)
+engageTroop :: [([Sworder], [Sworder])] -> [(Sworder, Sworder)]
+engageTroop [] = []
+engageTroop (x:xs) = (zipOverFlow (fst x) (snd x)) ++ (engageTroop xs)
 
-engageTroopWrap :: [Sworder] -> [Sworder] -> [[(Sworder, Sworder)]]
-engageTroopWrap x@([Sworder]) y@([Sworder]) =
-        if (length x > length y)
-            then (zip xs y) ++ (engageTroopWrap zs y)
-            else (zip x y)
-        where 
-            (xs, zs) = splitAt (length y) x
+
+zipOverFlow :: [Sworder] -> [Sworder] -> [(Sworder, Sworder)]
+zipOverFlow x y = if (length x > length y) 
+                     then let (xs, zs) = splitAt (length y) x
+                          in (zip xs y) ++ zipOverFlowHelper zs y
+                     else let (ys, zs) = splitAt (length x) y
+                          in (zip x ys) ++ zipOverFlowHelper zs x
+
+zipOverFlowHelper ::  [Sworder] -> [Sworder] -> [(Sworder, Sworder)]
+zipOverFlowHelper large small = 
+    if (length large > length small) 
+        then let (xs, zs) = splitAt (length small) large
+             in (zip xs small) ++ zipOverFlowHelper zs small
+        else zip large small
+
+
+
+
+
 
 parseUnits :: [Char] -> [String] -> [String] -> [String] -> [String]
 parseUnits (x:y:zs) a b c = 
