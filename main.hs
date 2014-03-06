@@ -1,5 +1,6 @@
 import System.IO  
 import Control.Monad
+import Data.Unique.Id
 
 class Troop a where
     strength :: a -> Int 
@@ -31,62 +32,64 @@ instance Commander ArrowerCommander where
 class Squad c where 
     commander :: c -> Commander
     iter :: c -> [Troop]
+    id :: c -> Id
+    side :: c -> Int
 
-data SworderSquad = SworderSquad SworderCommander [Sworder]
+data SworderSquad = SworderSquad SworderCommander [Sworder] Id Int 
 instance Squad SworderSquad where
-    commander (SworderSquad x _) = x
-    iter (SworderSquad x y) = y ++ x 
+    commander (SworderSquad x _ _ _) = x
+    iter (SworderSquad x y _ _) = y ++ x
+    id (SworderSquad _ _ x _) = x
+    side (SworderSquad _ _ _ x) = x 
 
-data ArrowerSquad = ArrowerSquad ArrowerCommander [Arrower]
+data ArrowerSquad = ArrowerSquad ArrowerCommander [Arrower] Id Int 
 instance Squad ArrowerSquad where
     commander (ArrowerSquad x _) = x
     iter (ArrowerSquad x y) = y ++ x
+    id (ArrowerSquad _ _ x _) = x
+    side (ArrowerSquad _ _ _ x) = x
 
-data ScatterSquad = ScatterSquad [Sworder]
+data ScatterSquad = ScatterSquad Id Int [Sworder]  
 instance Squad ScatterSquad where
-    commander (ScatterSquad x _) = (SworderCommander (4, (Sworder 0)))
-    iter (ScatterSquad x) = x
+    commander (ScatterSquad _ _ x _) = (SworderCommander (4, (Sworder 0)))
+    iter (ScatterSquad _ _ x) = x
+    id (ArrowerSquad _ x _) = x
+    side (ArrowerSquad _ x _) = x
 
 class Engagement x where 
     add :: Troop -> x
 
 
 class EngageableGroup x where
-    engageSwordVSword :: x -> x -> [Engagement]
-    engageSwordVScatter :: x -> x -> [Engagement]
-    engageScatterVSword :: x -> x -> [Engagement]
-    engage :: (f -> b) -> [Engagement]
+    engageSwordVSword :: x -> x -> x -> x -> [Engagement]
+    engageSwordVScatter :: x -> x -> x ->  [Engagement]
+    engageWrap :: x -> x -> x -> [Engagement]
 
 
 data SworderVSSworder = SworderVSSworder SworderSquad SworderSquad
 instance EngageableGroup SworderVSSworder where
-    engageSwordVSword (SworderSquad x) (SworderSquad y) = if (length x > length y)
-                                                    then zip xs y
-                                                         engageSwordVScatter zs
+    engageSwordVSword ([SworderSquad] a@(x:xs)) ([SworderSquad] b@(y:ys)) ([ScatterSquad] c) ([ScatterSquad] d) = 
+                                                if (length a > length b)
+                                                    then (zip as b) ++ (engageSwordVScatter zs d b) 
                                                          where
-                                                            (xs, zs) = splitAt (length y) x 
-                                                    else zip x ys 
-                                                         engageScatterVSword as 
+                                                            (as, zs) = splitAt (length b) a 
+                                                    else (zip a bs) ++ (engageSwordVScatter zs c a) 
                                                          where
-                                                            (ys, as) = splitAt (length x) y
+                                                            (bs, zs) = splitAt (length a) b
 
-    engageSwordVScatter (SworderSquad x) (ScatterSquad y) = if (length x > length y)
-                                                    then zip xs y
-                                                         engageSwordVScatter zs
+    engageSwordVScatter ([SworderSquad] x) ([ScatterSquad] b@(y:ys)) ([SworderSquad] c) = 
+                                                if (length x > length b)
+                                                    then (zip xs b) ++ engageSwordVSword zs ys c
                                                          where
-                                                            (xs, zs) = splitAt (length y) x 
-                                                    else zip x ys 
+                                                            (xs, zs) = splitAt (length b) x 
+                                                    else zip x bs
+
+    engageWrap ([SworderSquad] a) ([ScatterSquad] b) ([SworderSquad] c) = 
+                                                if (length a > length c)
+                                                    then (zip as c) ++ engageSwordVScatter zs b c
                                                          where
-                                                            (ys, as) = splitAt (length x) y
-    engageScatterVSword (ScatterSquad x) (SworderSquad y) = if (length x > length y)
-                                                    then zip xs y
-                                                         where
-                                                            (xs, zs) = splitAt (length y) x 
-                                                    else zip x ys 
-                                                         engageScatterVSword as
-                                                         where
-                                                            (ys, as) = splitAt (length x) y
-    engage (engageSwordVSword (SworderSquad x) (SworderSquad y)) = 
+                                                            (as, zs) = splitAt (length c) a
+                                                    else zip a bs 
 
 
 main = print "test"
