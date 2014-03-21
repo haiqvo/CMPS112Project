@@ -1,0 +1,28 @@
+***********************************************
+Kartoon Kombat 
+By Hai Vo & Richard Nicholson
+***********************************************
+This game is even more simple than the Java version becasue after many hours of working we were not 
+able to get complex version on haskell as we have wanted. More on this topic will be discussed on 
+the write including the reason. Overall in this very there are no Arrowers and ScatterSquad, in this
+one we have the Sworder face off and if the commander dies that the squad dies. There was also no 
+actually parser and to get squad you must go into main.hs and in the top part in squad1 and squad2 edit 
+the squads roster.
+
+How to Run
+make sure you have the main.hs and simply type ghc main.hs to run.
+
+How to play
+Go into the main.hs and manually edit squad1 and squad2 there are instuction in the file.
+but here you go 
+
+-- So after so much tear were shed this program work in it very basic form and there was no time 
+-- for a parser that takes from file sorry. So I already have a sample squad but to make more 
+-- should have to know some things. 
+-- (Sworder a b c d e f)
+-- a is the strength this will determine the attack strength and health of the character
+-- b is the troopId this is unique to the Sworder 
+-- c is the squadId and it the same across Sworders of the same squad
+-- d is the side and for squad1 please use 1 and squad two please use 2
+-- e is the isCommander and should be zero unless it is the commander (note commander should be at the end of squads)
+-- f is the damageTaken and should be zero at the beginning   
